@@ -20,7 +20,7 @@ func NewBroker(port string) *MQTTBroker {
 	// Конфигурируем TCP-слушатель
 	tcp := listeners.NewTCP(listeners.Config{
 		ID:      "t1",
-		Address: fmt.Sprintf(":%s", port),
+		Address: fmt.Sprintf("0.0.0.0:%s", port),
 	})
 
 	err := b.AddListener(tcp)
