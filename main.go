@@ -17,7 +17,7 @@ func main() {
 	// 2. Создаем TCP-слушатель на стандартном MQTT порту 1883
 	tcp := listeners.NewTCP(listeners.Config{
 		ID:      "t1",
-		Address: ":1883",
+		Address: "0.0.0.0:1883",
 	})
 
 	// 3. Добавляем слушатель в брокер
