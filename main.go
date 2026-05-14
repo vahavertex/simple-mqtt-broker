@@ -6,13 +6,13 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/mochi-mqtt/server/v2"
-	"github.com"
+	mqtt "github.com/mochi-mqtt/server/v2"
+	"github.com/mochi-mqtt/server/v2/listeners"
 )
 
 func main() {
 	// 1. Создаем экземпляр сервера (в v2 используется функция New)
-	b := server.New(nil)
+	b := mqtt.New(nil)
 
 	// 2. Создаем TCP-слушатель на стандартном MQTT порту 1883
 	tcp := listeners.NewTCP(listeners.Config{
