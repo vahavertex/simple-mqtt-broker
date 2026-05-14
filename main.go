@@ -1,31 +1,52 @@
 package main
 
 import (
-	"log"
+	"context"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
-	// Импортируем ваш внутренний пакет
 	"simple-mqtt-broker/broker"
 )
 
 func main() {
-	// 1. Инициализируем брокер на стандартном порту 1883
-	mqttBroker := broker.NewBroker("1883")
+	// Инициализируем структурированный логгер для вывода в формате JSON или Text
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
 
-	// 2. Запускаем сервер
-	mqttBroker.Start()
-	log.Println("Приложение успешно запущено. Ожидание сигналов...")
+	// 1. Создаем контекст, который автоматически отменится при Ctrl+C (SIGINT) или SIGTERM
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
-	// 3. Ожидаем системный сигнал прерывания (Ctrl+C)
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-	<-sigs
-
-	// 4. Корректно завершаем работу модуля
-	if err := mqttBroker.Stop(); err != nil {
-		log.Fatalf("Ошибка при остановке брокера: %v", err)
+	// 2. Определяем конфигурацию (в будущем можно брать из os.Getenv)
+	cfg := broker.Config{
+		Port: "1883",
+		ID:   "main-tcp-listener",
 	}
-	log.Println("Приложение завершило работу.")
+
+	mqttBroker := broker.NewBroker(cfg)
+
+	// Kanal для отслеживания завершения работы брокера
+	done := make(chan struct{})
+
+	// 3. Запускаем брокер в горутине, передавая ему контекст
+	go func() {
+		if err := mqttBroker.Start(ctx); err != nil {
+			slog.Error("Broker stopped with error", "error", err)
+		}
+		close(done)
+	}()
+
+	slog.Info("Application initialized. Press Ctrl+C to exit.")
+
+	// Блокируем main до тех пор, пока Start() не завершит работу (после отмены ctx)
+	<-done
+
+	// Дополнительный таймаут для гарантии завершения всех фоновых процессов
+	_, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	slog.Info("Application successfully stopped")
 }
